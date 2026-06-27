@@ -4,7 +4,7 @@ const state = {
   selected: new Set()
 };
 
-const defaultApiBase = window.location.hostname === "zhangaipi.github.io"
+const defaultApiBase = window.location.protocol === "https:"
   ? "https://judy-saturn-warner-anywhere.trycloudflare.com"
   : "";
 const params = new URLSearchParams(window.location.search);
@@ -245,7 +245,9 @@ async function init() {
   const configResponse = await fetch(apiUrl("/api/config")).catch(() => null);
   state.songs = await songsResponse.json();
   const config = configResponse?.ok ? await configResponse.json() : { aiReady: false, model: "Pages demo" };
-  els.aiStatus.textContent = config.aiReady ? config.model : "Pages demo";
+  els.aiStatus.textContent = config.aiReady
+    ? `${config.model}${apiBase ? " · remote AI" : " · local AI"}`
+    : "Pages demo";
 
   fillSelect(els.gradeFilter, "年级", uniqueOptions("grade"));
   fillSelect(els.regionFilter, "地区", uniqueOptions("region"));
