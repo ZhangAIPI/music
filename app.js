@@ -138,8 +138,40 @@ function renderSources() {
     .join("");
 }
 
+function toItems(value) {
+  if (value == null || value === "") return [];
+  if (Array.isArray(value)) return value.flatMap(toItems).filter(Boolean);
+  if (typeof value === "object") {
+    return Object.entries(value).flatMap(([key, item]) => {
+      const nested = toItems(item);
+      return nested.length ? nested.map((entry) => `${key}：${entry}`) : [key];
+    });
+  }
+  return String(value)
+    .split(/\n+|(?:^|\s)[-•]\s+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 function list(items = []) {
-  return `<ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`;
+  const normalized = toItems(items);
+  return normalized.length
+    ? `<ul>${normalized.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
+    : "";
+}
+
+function paragraph(value) {
+  const items = toItems(value);
+  if (!items.length) return "";
+  return items.length === 1 ? `<p>${escapeHtml(items[0])}</p>` : list(items);
+}
+
+function flowItems(value) {
+  const raw = Array.isArray(value) ? value : (value && typeof value === "object" ? Object.values(value) : []);
+  return raw.map((item) => {
+    if (typeof item === "string") return { time: "", step: item, teacher: "", student: "" };
+    return item && typeof item === "object" ? item : { time: "", step: String(item || ""), teacher: "", student: "" };
+  });
 }
 
 function buildStaticPlan(payload) {
@@ -175,15 +207,15 @@ function buildStaticPlan(payload) {
 }
 
 function renderPlan(plan, meta = {}) {
-  const flow = Array.isArray(plan.flow) ? plan.flow : [];
+  const flow = flowItems(plan.flow);
   const sections = [
-    ["教学目标", list(plan.objectives || [])],
-    ["材料准备", list(plan.materials || [])],
-    ["分层支持", list(plan.differentiation || [])],
-    ["评估方式", list(plan.assessment || [])],
-    ["文化提示", Array.isArray(plan.culturalNotes) ? list(plan.culturalNotes) : `<p>${escapeHtml(plan.culturalNotes || "")}</p>`],
-    ["课后延伸", `<p>${escapeHtml(plan.homework || "")}</p>`]
-  ].filter(([, content]) => !content.includes("<ul></ul>") && content !== "<p></p>");
+    ["教学目标", list(plan.objectives)],
+    ["材料准备", list(plan.materials)],
+    ["分层支持", list(plan.differentiation)],
+    ["评估方式", list(plan.assessment)],
+    ["文化提示", paragraph(plan.culturalNotes)],
+    ["课后延伸", paragraph(plan.homework)]
+  ].filter(([, content]) => Boolean(content));
 
   els.lessonPlan.className = "lesson-plan";
   els.lessonPlan.innerHTML = `
