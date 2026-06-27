@@ -146,6 +146,13 @@ function toItems(value) {
       const features = toItems(value.features).join("、");
       return [`${value.song || "曲目"}${features ? `：${features}` : ""}${value.useInLesson ? `；${value.useInLesson}` : ""}`];
     }
+    if (value.activity || value.purpose || value.steps) {
+      const steps = toItems(value.steps).join("；");
+      return [`${value.activity || "活动"}${value.purpose ? `：${value.purpose}` : ""}${steps ? `；步骤：${steps}` : ""}`];
+    }
+    if (value.criteria || value.target || value.evidence) {
+      return [`${value.criteria || "评价项"}${value.target ? `：${value.target}` : ""}${value.evidence ? `；证据：${value.evidence}` : ""}`];
+    }
     if (value.teachingMethod || value.learnerProfile || value.existingExperience) {
       return [Object.entries(value).map(([key, item]) => `${key}：${toItems(item).join("、")}`).join("；")];
     }
@@ -222,6 +229,7 @@ function buildStaticPlan(payload) {
     ],
     assessment: ["观察学生能否稳定保持脉搏。", "检查学生是否能用具体音乐词汇说明听辨结果。", "用出口条判断文化连接是否具体。"],
     culturalNotes: focuses.length ? focuses : ["把音乐材料放回地域、语言、乐器和生活场景中理解。"],
+    aiEvaluation: `AI评价：这份教案能把${titles}的音乐特征和${payload.audience || "学生"}的学习条件连接起来，适合作为课堂展示型活动的雏形；教师实施时要留意学生是否能说出具体音乐证据，而不是只完成动作。`,
     homework: "采访家人熟悉的一首地方歌曲或一种传统乐器声音，下节课带来一句描述。"
   };
 }
@@ -230,10 +238,17 @@ function renderPlan(plan, meta = {}) {
   const flow = flowItems(plan.flow);
   const sections = [
     ["所选曲目", list(plan.selectedSongTitles)],
+    ["核心设计", paragraph(plan.lessonBigIdea)],
+    ["学习者分析", list(plan.learnerProfileAnalysis)],
     ["曲目依据", list(plan.songRationale)],
     ["受众适配", list(plan.audienceAdaptation)],
     ["教学目标", list(plan.objectives)],
     ["材料准备", list(plan.materials)],
+    ["活动细节", list(plan.activityDetails)],
+    ["教师话术", list(plan.teacherPrompts)],
+    ["展示产出", paragraph(plan.performanceProduct)],
+    ["评价量规", list(plan.assessmentRubric)],
+    ["AI评价", paragraph(plan.aiEvaluation)],
     ["分层支持", list(plan.differentiation)],
     ["评估方式", list(plan.assessment)],
     ["文化提示", paragraph(plan.culturalNotes)],

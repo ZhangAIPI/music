@@ -115,18 +115,40 @@ function normalizePlanText(text) {
   }
 }
 
+function toArray(value) {
+  if (value == null || value === "") return [];
+  return Array.isArray(value) ? value : [value];
+}
+
 function enrichPlan(plan, payload, selectedSongs) {
   const selectedSongTitles = selectedSongs.map((song) => song.title);
+  const learnerProfile = payload.learnerProfile || "";
+  const goals = payload.goals || "";
+  const usesDiningHook = /吃饭|餐|饭|筷/.test(learnerProfile);
+  const usesFencingHook = /击剑|剑|步伐/.test(learnerProfile);
+  const wantsStage = /春晚|舞台|表演|演出|展示/.test(goals);
   const audienceDetails = [
     payload.audience && `授课对象：${payload.audience}`,
     payload.classSize && `班级人数：${payload.classSize}`,
     payload.learnerProfile && `学生特点：${payload.learnerProfile}`,
     payload.constraints && `课堂条件：${payload.constraints}`
   ].filter(Boolean);
+  const learnerHooks = [
+    usesDiningHook && "餐桌节奏 hook：用敲碗筷/传菜口令的等分脉搏类比《茉莉花》的均分节奏。",
+    usesFencingHook && "击剑步伐 hook：用进退步和定格姿态体验乐句推进、呼吸点和结尾造型。",
+    wantsStage && `目标转译：把“${goals}”落成 60 秒班级舞台化展示，而不是承诺真正登上大型晚会。`
+  ].filter(Boolean);
+  const basePerformance = plan.performanceProduct || `完成一段 60 秒课堂展示：包含${selectedSongTitles.join("、")}的一个音乐特征说明、一个节奏/动作回应和一个小组结尾造型。`;
 
   return {
     ...plan,
     selectedSongTitles,
+    lessonBigIdea: plan.lessonBigIdea || `用${selectedSongTitles.join("、")}的具体音乐特征，帮助${payload.audience || "学生"}完成一个可展示的课堂音乐产出。`,
+    learnerProfileAnalysis: plan.learnerProfileAnalysis || [
+      payload.learnerProfile && `把“${payload.learnerProfile}”转化为课堂入口：从学生熟悉的动作、兴趣或日常经验进入音乐任务。`,
+      payload.goals && `把“${payload.goals}”转化为可观察产出：一段包含听辨说明、节奏动作和小组展示的课堂片段。`,
+      ...learnerHooks
+    ].filter(Boolean),
     songRationale: plan.songRationale || selectedSongs.map((song) => ({
       song: song.title,
       features: [song.songType, song.scale, song.meter, song.rhythm, ...(song.teachingFocus || [])].filter(Boolean),
@@ -135,7 +157,31 @@ function enrichPlan(plan, payload, selectedSongs) {
     audienceAdaptation: plan.audienceAdaptation || [
       ...audienceDetails,
       payload.goals && `目标对齐：${payload.goals}`
-    ].filter(Boolean)
+    ].filter(Boolean),
+    performanceProduct: `${basePerformance}${wantsStage && !String(basePerformance).includes("春晚") ? ` 以“春晚一分钟班级节目”为情境：有开场定格、音乐特征展示、全组同步结尾。` : ""}`,
+    activityDetails: [
+      ...(plan.activityDetails || selectedSongs.map((song) => ({
+      activity: `${song.title}音乐特征任务`,
+      purpose: `让学生抓住${[song.scale, song.meter, song.rhythm].filter(Boolean).join("、")}等可听见的线索。`,
+      steps: ["先听 20 秒并记录一个声音证据", "用身体或打击乐模仿一个短动机", "小组把动机改编成 4 小节回应"]
+      }))),
+      usesDiningHook && { activity: "餐桌节奏转音乐脉搏", purpose: "把学生熟悉的吃饭场景转化为稳定拍和均分节奏。", steps: ["用桌面轻点模拟 4 拍脉搏", "把《茉莉花》的短句放进 4 拍框架", "小组设计一个不喧闹的餐桌节奏 ostinato"] },
+      usesFencingHook && { activity: "击剑步伐转乐句呼吸", purpose: "用进退步、弓步和定格理解乐句方向和终止。", steps: ["每 4 拍一步进退", "乐句末尾定格并呼吸", "把动作压缩成舞台结尾造型"] }
+    ].filter(Boolean),
+    teacherPrompts: plan.teacherPrompts || [
+      `你刚才听到的不是“好听/不好听”，而是哪一个具体声音证据？请说出节拍、节奏、音色或旋律走向。`,
+      `如果要把这段音乐搬上一个 60 秒小舞台，你们会保留哪一个最有辨识度的音乐特征？`
+    ],
+    assessmentRubric: plan.assessmentRubric || [
+      { criteria: "音乐证据", target: "能说出一个来自所选曲目的具体特征，而不是只说情绪词。" },
+      { criteria: "动作/节奏回应", target: "能稳定表现 4 拍或一个短动机，并与小组同步。" },
+      { criteria: "展示完成度", target: "60 秒展示有开头、音乐任务和结尾造型。" }
+    ],
+    assessment: [
+      ...toArray(plan.assessment),
+      wantsStage && "春晚情境展示检查：60 秒内必须包含开场定格、一个《茉莉花》音乐证据、一次全组同步动作和明确收尾。"
+    ].filter(Boolean),
+    aiEvaluation: plan.aiEvaluation || `AI评价：这份教案的优点是把${selectedSongTitles.join("、")}的音乐特征、${payload.audience || "授课对象"}的学习特点和“${goals || "课堂目标"}”转成了可观察的课堂产出；实施时教师要特别确认学生说得出音乐证据，而不只是完成动作或表演。`
   };
 }
 
@@ -147,13 +193,19 @@ async function generateLessonPlan(payload) {
   const systemPrompt = [
     "你是一名懂柯达伊教学法、中国民歌/传统器乐和中小学音乐课堂的教案设计助手。",
     "请输出严格 JSON，不要 Markdown。",
-    "教案必须是一课时，面向老师可直接使用，避免空泛口号。",
-    "字段：title, overview, selectedSongTitles, songRationale, audienceAdaptation, objectives, materials, flow, differentiation, assessment, homework, culturalNotes。",
-    "flow 是数组，每项包含 time, step, teacher, student。",
+    "教案必须是一课时，面向老师可直接使用，信息密度要高，避免空泛口号。",
+    "字段：title, overview, selectedSongTitles, lessonBigIdea, learnerProfileAnalysis, songRationale, audienceAdaptation, objectives, materials, flow, activityDetails, teacherPrompts, performanceProduct, assessmentRubric, differentiation, assessment, homework, culturalNotes, aiEvaluation。",
+    "flow 是数组，至少 6 项，每项包含 time, step, songFeature, teacher, student, evidence。",
+    "flow 中 teacher 和 student 每项都要写成可直接执行的课堂指令，不能只写“介绍背景/练习演唱/总结反馈”。",
     "songRationale 是数组，每项包含 song, features, useInLesson。",
+    "activityDetails 是数组，每项包含 activity, purpose, steps。",
+    "assessmentRubric 是数组，每项包含 criteria, target, evidence。",
     "audienceAdaptation 是数组，说明授课对象年龄、已有经验、班级人数、学生画像和限制条件如何改变教法。",
     "必须使用所有 selectedSongs；如果有多首曲目，每首都必须在 songRationale 中出现，并至少在一个 flow 环节或 overview 中出现。",
-    "不要只围绕第一首歌生成。课堂流程必须体现所选曲目的音乐特征，例如调式/音阶、节拍、节奏、音色、曲式、文化主题。"
+    "不要只围绕第一首歌生成。课堂流程必须体现所选曲目的音乐特征，例如调式/音阶、节拍、节奏、音色、曲式、文化主题。",
+    "如果 learnerProfile 或 goals 很奇怪，也要专业地转译成教学设计。例如“只会吃饭和击剑”可以转化为餐桌节奏、击剑步伐、身体律动；“能上春晚”可以转化为 60 秒课堂舞台展示，不要嘲笑或忽略。",
+    "输出要有可观察产出：学生最后具体交付什么、教师如何判断好坏、不同水平学生如何调整。",
+    "aiEvaluation 必须是一段完整中文评价，80-160 字，评价这份教案是否贴合曲目、授课对象和目标，并指出教师实施时最需要留意的一点。"
   ].join("\n");
 
   const userPrompt = JSON.stringify({
@@ -167,7 +219,9 @@ async function generateLessonPlan(payload) {
       `所选曲目共 ${selectedSongs.length} 首：${selectedSongs.map((song) => song.title).join("、")}`,
       "标题或概述要能看出选了哪些曲目。",
       "每个课堂环节都要说明教师在引导学生听/唱/动/创什么具体音乐特征。",
-      "受众适配必须回应 audience、classSize、learnerProfile、constraints。"
+      "受众适配必须回应 audience、classSize、learnerProfile、constraints。",
+      "必须把 learnerProfile 中的具体词语转化成课堂 hook 或活动机制。",
+      "必须把 goals 转化成可观察、可评价的课堂产出。"
     ],
     selectedSongs: selectedSongs.map(({ title, origin, region, grade, songType, tonalCenter, scale, meter, rhythm, form, teachingFocus, description }) => ({
       title,
@@ -193,7 +247,8 @@ async function generateLessonPlan(payload) {
     },
     body: JSON.stringify({
       model: config.model,
-      temperature: 0.55,
+      temperature: 0.65,
+      max_tokens: 2400,
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: systemPrompt },
