@@ -182,7 +182,7 @@ function renderPlan(plan, meta = {}) {
     <div>
       <h3>${escapeHtml(plan.title || "一课时教案")}</h3>
       <p>${escapeHtml(plan.overview || "")}</p>
-      ${meta.usedFallback ? `<p><strong>当前使用离线备用方案；请检查 AI 配置或接口返回。</strong>${meta.aiError ? ` ${escapeHtml(meta.aiError)}` : ""}</p>` : ""}
+      ${meta.usedFallback ? `<p><strong>当前使用离线备用方案。</strong>${meta.aiError ? ` ${escapeHtml(meta.aiError)}` : ""}</p>` : ""}
     </div>
     <div class="lesson-section">
       <h4>课堂流程</h4>
@@ -220,7 +220,8 @@ async function generateLesson(event) {
   els.lessonPlan.textContent = "AI 正在组织课堂流程、目标和评估方式。";
 
   try {
-    const response = await fetch(apiUrl("/api/lesson-plan"), {
+    const lessonApiUrl = apiUrl("/api/lesson-plan");
+    const response = await fetch(lessonApiUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
@@ -231,7 +232,7 @@ async function generateLesson(event) {
   } catch (error) {
     renderPlan(buildStaticPlan(payload), {
       usedFallback: true,
-      aiError: "当前页面未连接可用后端；本结果为前端演示教案。"
+      aiError: `当前页面未连接可用后端；本结果为前端演示教案。尝试连接：${apiUrl("/api/lesson-plan")}。实时 AI 版：${defaultApiBase || window.location.origin}`
     });
   } finally {
     els.generateBtn.disabled = false;
