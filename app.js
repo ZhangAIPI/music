@@ -4,8 +4,9 @@ const state = {
   selected: new Set()
 };
 
-const defaultApiBase = window.location.protocol === "https:"
-  ? "https://judy-saturn-warner-anywhere.trycloudflare.com"
+const liveApiBase = "https://judy-saturn-warner-anywhere.trycloudflare.com";
+const defaultApiBase = window.location.hostname === "zhangaipi.github.io"
+  ? liveApiBase
   : "";
 const params = new URLSearchParams(window.location.search);
 const apiBase = (params.get("api") || window.IYGE_API_BASE || defaultApiBase).replace(/\/$/, "");
@@ -232,7 +233,7 @@ async function generateLesson(event) {
   } catch (error) {
     renderPlan(buildStaticPlan(payload), {
       usedFallback: true,
-      aiError: `当前页面未连接可用后端；本结果为前端演示教案。尝试连接：${apiUrl("/api/lesson-plan")}。实时 AI 版：${defaultApiBase || window.location.origin}`
+      aiError: `当前页面未连接可用后端；本结果为前端演示教案。尝试连接：${apiUrl("/api/lesson-plan")}。实时 AI 版：${liveApiBase}`
     });
   } finally {
     els.generateBtn.disabled = false;
