@@ -12,7 +12,7 @@
 https://zhangaipi.github.io/music/?api=https://your-backend.example.com
 ```
 
-注意：GitHub Pages 是 HTTPS，浏览器通常会阻止从 HTTPS 页面调用普通 HTTP 后端。公开演示时建议给后端套 HTTPS，或直接访问 Node 服务页面。
+当前演示页默认连接一个 tmux 中运行的 Cloudflare quick tunnel。quick tunnel 是临时地址，如果 tunnel 重启后地址变化，用上面的 `?api=` 参数覆盖，或更新 `app.js` 中的默认地址。
 
 ## 本地 / 服务器运行
 

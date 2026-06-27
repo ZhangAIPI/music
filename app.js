@@ -4,8 +4,11 @@ const state = {
   selected: new Set()
 };
 
+const defaultApiBase = window.location.hostname === "zhangaipi.github.io"
+  ? "https://judy-saturn-warner-anywhere.trycloudflare.com"
+  : "";
 const params = new URLSearchParams(window.location.search);
-const apiBase = (params.get("api") || window.IYGE_API_BASE || "").replace(/\/$/, "");
+const apiBase = (params.get("api") || window.IYGE_API_BASE || defaultApiBase).replace(/\/$/, "");
 
 function apiUrl(path) {
   return apiBase ? `${apiBase}${path}` : path;
