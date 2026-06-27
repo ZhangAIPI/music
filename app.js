@@ -105,7 +105,7 @@ function renderSongs() {
         <div class="focus">${song.teachingFocus.map((item) => `<span>${escapeHtml(item)}</span>`).join("")}</div>
         ${song.audio ? `<audio controls preload="metadata" src="${escapeHtml(assetUrl(song.audio))}"></audio>` : ""}
         ${song.scoreImage ? `<img class="score-preview" src="${escapeHtml(assetUrl(song.scoreImage))}" alt="${escapeHtml(song.title)}曲谱预览" />` : ""}
-        <a class="source-link" href="${escapeHtml(song.sourceUrl)}" target="_blank" rel="noreferrer">素材来源</a>
+        <a class="source-link" href="${escapeHtml(song.sourceUrl)}" target="_blank" rel="noreferrer">来源说明</a>
       </article>
     `;
   }).join("");
