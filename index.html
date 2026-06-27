@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>IYGE 中国音乐教学馆藏</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/">
+        <span class="brand-mark">IYGE</span>
+        <span>
+          <strong>中国音乐教学馆藏</strong>
+          <small>Kodály-style Collection + AI Lesson Planner</small>
+        </span>
+      </a>
+      <nav>
+        <a href="#collection">资源检索</a>
+        <a href="#planner">AI 教案</a>
+        <a href="#sources">素材来源</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <img src="images/fuzhou-performance.jpg" alt="传统福州音乐演出现场" />
+        <div class="hero-copy">
+          <p>面向音乐老师的民歌与器乐课堂资源库</p>
+          <h1>IYGE AI 教案生成器</h1>
+          <span>按年级、调式、节奏、主题筛选曲目，再让 AI 根据学生画像生成一节课可用教案。</span>
+        </div>
+      </section>
+
+      <section class="workspace" id="collection">
+        <aside class="filters" aria-label="筛选曲目">
+          <div class="panel-title">
+            <h2>Refine Search</h2>
+            <button id="resetFilters" type="button">Reset</button>
+          </div>
+          <label>
+            关键词
+            <input id="searchInput" type="search" placeholder="曲名、地区、教学重点" />
+          </label>
+          <label>
+            年级
+            <select id="gradeFilter"></select>
+          </label>
+          <label>
+            地区
+            <select id="regionFilter"></select>
+          </label>
+          <label>
+            曲目类型
+            <select id="typeFilter"></select>
+          </label>
+          <label>
+            调式/音阶
+            <select id="scaleFilter"></select>
+          </label>
+          <label>
+            节拍
+            <select id="meterFilter"></select>
+          </label>
+          <div class="hint">选择曲目后，右侧 AI 会把它们纳入课堂流程。</div>
+        </aside>
+
+        <section class="results">
+          <div class="results-head">
+            <div>
+              <h2>Search the Collection</h2>
+              <p id="resultCount">正在加载曲库...</p>
+            </div>
+            <button id="selectVisible" class="secondary" type="button">选择当前结果</button>
+          </div>
+          <div id="songGrid" class="song-grid"></div>
+        </section>
+
+        <aside class="planner" id="planner">
+          <div class="panel-title">
+            <h2>AI Lesson Plan</h2>
+            <span id="aiStatus">checking</span>
+          </div>
+          <form id="lessonForm">
+            <label>
+              授课对象
+              <input name="audience" value="四年级，已有基础节奏读谱经验" />
+            </label>
+            <div class="form-row">
+              <label>
+                课时
+                <input name="duration" value="40" inputmode="numeric" />
+              </label>
+              <label>
+                班级人数
+                <input name="classSize" value="28" inputmode="numeric" />
+              </label>
+            </div>
+            <label>
+              学生画像
+              <textarea name="learnerProfile">学生喜欢动作和小组合作，但对五声音阶和中国传统乐器认识较少。</textarea>
+            </label>
+            <label>
+              教学目标
+              <textarea name="goals">通过聆听、模唱和创编，让学生能辨认中国传统音色，并用简单节奏/旋律回应。</textarea>
+            </label>
+            <label>
+              限制条件
+              <textarea name="constraints">教室有投影、音箱、手鼓和木鱼；不要求学生会五线谱。</textarea>
+            </label>
+            <button id="generateBtn" type="submit">生成一课时教案</button>
+          </form>
+          <div class="selected-box">
+            <strong>已选曲目</strong>
+            <div id="selectedSongs">尚未选择</div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="lesson-output" aria-live="polite">
+        <div class="lesson-head">
+          <h2>生成结果</h2>
+          <button id="copyPlan" class="secondary" type="button">复制教案</button>
+        </div>
+        <div id="lessonPlan" class="empty-state">选择 1-3 首曲目后生成教案。</div>
+      </section>
+
+      <section class="sources" id="sources">
+        <h2>开放素材来源</h2>
+        <p>曲库 demo 使用 Wikimedia Commons 上的公开媒体文件；实际产品可替换为学校自有授权曲库。</p>
+        <div id="sourceList" class="source-list"></div>
+      </section>
+    </main>
+
+    <script src="app.js" type="module"></script>
+  </body>
+</html>
