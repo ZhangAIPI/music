@@ -115,6 +115,30 @@ function normalizePlanText(text) {
   }
 }
 
+function enrichPlan(plan, payload, selectedSongs) {
+  const selectedSongTitles = selectedSongs.map((song) => song.title);
+  const audienceDetails = [
+    payload.audience && `授课对象：${payload.audience}`,
+    payload.classSize && `班级人数：${payload.classSize}`,
+    payload.learnerProfile && `学生特点：${payload.learnerProfile}`,
+    payload.constraints && `课堂条件：${payload.constraints}`
+  ].filter(Boolean);
+
+  return {
+    ...plan,
+    selectedSongTitles,
+    songRationale: plan.songRationale || selectedSongs.map((song) => ({
+      song: song.title,
+      features: [song.songType, song.scale, song.meter, song.rhythm, ...(song.teachingFocus || [])].filter(Boolean),
+      useInLesson: `围绕${song.description}，设计听辨、模仿或创编任务。`
+    })),
+    audienceAdaptation: plan.audienceAdaptation || [
+      ...audienceDetails,
+      payload.goals && `目标对齐：${payload.goals}`
+    ].filter(Boolean)
+  };
+}
+
 async function generateLessonPlan(payload) {
   const songs = JSON.parse(await readFile(dataPath, "utf8"));
   const selectedSongs = songs.filter((song) => payload.songIds?.includes(song.id));
@@ -124,8 +148,12 @@ async function generateLessonPlan(payload) {
     "你是一名懂柯达伊教学法、中国民歌/传统器乐和中小学音乐课堂的教案设计助手。",
     "请输出严格 JSON，不要 Markdown。",
     "教案必须是一课时，面向老师可直接使用，避免空泛口号。",
-    "字段：title, overview, objectives, materials, flow, differentiation, assessment, homework, culturalNotes。",
-    "flow 是数组，每项包含 time, step, teacher, student。"
+    "字段：title, overview, selectedSongTitles, songRationale, audienceAdaptation, objectives, materials, flow, differentiation, assessment, homework, culturalNotes。",
+    "flow 是数组，每项包含 time, step, teacher, student。",
+    "songRationale 是数组，每项包含 song, features, useInLesson。",
+    "audienceAdaptation 是数组，说明授课对象年龄、已有经验、班级人数、学生画像和限制条件如何改变教法。",
+    "必须使用所有 selectedSongs；如果有多首曲目，每首都必须在 songRationale 中出现，并至少在一个 flow 环节或 overview 中出现。",
+    "不要只围绕第一首歌生成。课堂流程必须体现所选曲目的音乐特征，例如调式/音阶、节拍、节奏、音色、曲式、文化主题。"
   ].join("\n");
 
   const userPrompt = JSON.stringify({
@@ -135,6 +163,12 @@ async function generateLessonPlan(payload) {
     learnerProfile: payload.learnerProfile,
     goals: payload.goals,
     constraints: payload.constraints,
+    mandatoryRequirements: [
+      `所选曲目共 ${selectedSongs.length} 首：${selectedSongs.map((song) => song.title).join("、")}`,
+      "标题或概述要能看出选了哪些曲目。",
+      "每个课堂环节都要说明教师在引导学生听/唱/动/创什么具体音乐特征。",
+      "受众适配必须回应 audience、classSize、learnerProfile、constraints。"
+    ],
     selectedSongs: selectedSongs.map(({ title, origin, region, grade, songType, tonalCenter, scale, meter, rhythm, form, teachingFocus, description }) => ({
       title,
       origin,
@@ -178,7 +212,8 @@ async function generateLessonPlan(payload) {
   }
 
   const data = await response.json();
-  return { plan: normalizePlanText(data.choices?.[0]?.message?.content || ""), usedFallback: false, model: config.model };
+  const plan = enrichPlan(normalizePlanText(data.choices?.[0]?.message?.content || ""), payload, selectedSongs);
+  return { plan, usedFallback: false, model: config.model };
 }
 
 async function handleStatic(req, res) {

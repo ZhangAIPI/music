@@ -142,6 +142,13 @@ function toItems(value) {
   if (value == null || value === "") return [];
   if (Array.isArray(value)) return value.flatMap(toItems).filter(Boolean);
   if (typeof value === "object") {
+    if (value.song || value.useInLesson) {
+      const features = toItems(value.features).join("、");
+      return [`${value.song || "曲目"}${features ? `：${features}` : ""}${value.useInLesson ? `；${value.useInLesson}` : ""}`];
+    }
+    if (value.teachingMethod || value.learnerProfile || value.existingExperience) {
+      return [Object.entries(value).map(([key, item]) => `${key}：${toItems(item).join("、")}`).join("；")];
+    }
     return Object.entries(value).flatMap(([key, item]) => {
       const nested = toItems(item);
       return nested.length ? nested.map((entry) => `${key}：${entry}`) : [key];
@@ -181,6 +188,19 @@ function buildStaticPlan(payload) {
   return {
     title: `${titles}一课时教学方案`,
     overview: `面向${payload.audience || "学生"}，用 ${payload.duration || 40} 分钟完成聆听、模唱、节奏/音色辨识和小组创编。`,
+    selectedSongTitles: selectedSongs.map((song) => song.title),
+    songRationale: selectedSongs.map((song) => ({
+      song: song.title,
+      features: [song.songType, song.scale, song.meter, song.rhythm, ...(song.teachingFocus || [])].filter(Boolean),
+      useInLesson: `围绕${song.description}，设计听辨、模仿或创编任务。`
+    })),
+    audienceAdaptation: [
+      payload.audience && `授课对象：${payload.audience}`,
+      payload.classSize && `班级人数：${payload.classSize}`,
+      payload.learnerProfile && `学生特点：${payload.learnerProfile}`,
+      payload.constraints && `课堂条件：${payload.constraints}`,
+      payload.goals && `目标对齐：${payload.goals}`
+    ].filter(Boolean),
     objectives: [
       `学生能说出${titles}中的至少两个音乐特征。`,
       "学生能用拍手、哼唱或动作表现关键节奏/旋律动机。",
@@ -209,6 +229,9 @@ function buildStaticPlan(payload) {
 function renderPlan(plan, meta = {}) {
   const flow = flowItems(plan.flow);
   const sections = [
+    ["所选曲目", list(plan.selectedSongTitles)],
+    ["曲目依据", list(plan.songRationale)],
+    ["受众适配", list(plan.audienceAdaptation)],
     ["教学目标", list(plan.objectives)],
     ["材料准备", list(plan.materials)],
     ["分层支持", list(plan.differentiation)],
