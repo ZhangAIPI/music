@@ -20,6 +20,13 @@ function assetUrl(value = "") {
   return value.replace(/^\//, "");
 }
 
+function encodePayload(payload) {
+  const bytes = new TextEncoder().encode(JSON.stringify(payload));
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
 const els = {
   searchInput: document.querySelector("#searchInput"),
   gradeFilter: document.querySelector("#gradeFilter"),
@@ -220,9 +227,9 @@ async function generateLesson(event) {
   els.lessonPlan.className = "empty-state";
   els.lessonPlan.textContent = "AI 正在组织课堂流程、目标和评估方式。";
 
+  let lastError = "";
   try {
-    const lessonApiUrl = apiUrl("/api/lesson-plan");
-    const response = await fetch(lessonApiUrl, {
+    const response = await fetch(apiUrl("/api/lesson-plan"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
@@ -231,10 +238,19 @@ async function generateLesson(event) {
     if (!response.ok) throw new Error(data.error || "生成失败");
     renderPlan(data.plan, data);
   } catch (error) {
-    renderPlan(buildStaticPlan(payload), {
-      usedFallback: true,
-      aiError: `当前页面未连接可用后端；本结果为前端演示教案。尝试连接：${apiUrl("/api/lesson-plan")}。实时 AI 版：${liveApiBase}`
-    });
+    lastError = error.message || String(error);
+    try {
+      const retryUrl = apiUrl(`/api/lesson-plan-get?payload=${encodePayload(payload)}`);
+      const retryResponse = await fetch(retryUrl, { method: "GET" });
+      const retryData = await retryResponse.json();
+      if (!retryResponse.ok) throw new Error(retryData.error || "GET 重试失败");
+      renderPlan(retryData.plan, retryData);
+    } catch (retryError) {
+      renderPlan(buildStaticPlan(payload), {
+        usedFallback: true,
+        aiError: `当前页面未连接可用后端；本结果为前端演示教案。POST 错误：${lastError}。GET 重试错误：${retryError.message || retryError}。实时 AI 版：${liveApiBase}`
+      });
+    }
   } finally {
     els.generateBtn.disabled = false;
     els.generateBtn.textContent = "生成一课时教案";

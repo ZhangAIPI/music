@@ -63,6 +63,11 @@ async function readJsonBody(req) {
   return text ? JSON.parse(text) : {};
 }
 
+function decodePayloadParam(value) {
+  if (!value) return {};
+  return JSON.parse(Buffer.from(value, "base64url").toString("utf8"));
+}
+
 function corsHeaders() {
   return {
     "Access-Control-Allow-Origin": process.env.CORS_ORIGIN || "*",
@@ -214,8 +219,19 @@ const server = createServer(async (req, res) => {
       sendJson(res, 200, { aiReady: Boolean(config.apiKey || config.xApiKey), model: config.model });
       return;
     }
+    if (req.method === "GET" && url.pathname === "/api/lesson-plan-get") {
+      const payload = decodePayloadParam(url.searchParams.get("payload"));
+      console.log(`[lesson-plan-get] songs=${payload.songIds?.length || 0} audience=${payload.audience || ""}`);
+      if (!Array.isArray(payload.songIds) || payload.songIds.length === 0) {
+        sendJson(res, 400, { error: "请至少选择一首曲目。" });
+        return;
+      }
+      sendJson(res, 200, await generateLessonPlan(payload));
+      return;
+    }
     if (req.method === "POST" && url.pathname === "/api/lesson-plan") {
       const payload = await readJsonBody(req);
+      console.log(`[lesson-plan-post] songs=${payload.songIds?.length || 0} audience=${payload.audience || ""}`);
       if (!Array.isArray(payload.songIds) || payload.songIds.length === 0) {
         sendJson(res, 400, { error: "请至少选择一首曲目。" });
         return;
